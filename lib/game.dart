@@ -5,9 +5,12 @@ import 'package:flame/components.dart';
 import 'package:flame/input.dart';
 import 'package:flame/events.dart';
 import 'package:flame/sprite.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class CardGame extends FlameGame with TapDetector {
   late TextComponent statusText;
+  late AudioPlayer audioPlayer;
+  late AudioCache audioCache;
   List<SpriteComponent> cardSprites = [];
 
   // Lista de imagens das cartas
@@ -48,6 +51,10 @@ class CardGame extends FlameGame with TapDetector {
   Future<void> onLoad() async {
     await super.onLoad();
 
+    // Inicializa o AudioPlayer e carrega os sons
+    audioPlayer = AudioPlayer();
+    audioCache = AudioCache();
+    audioCache.loadAll(['victory_sound.mp3', 'defeat_sound.mp3']);
     // Carregar as imagens das cartas
     final centerX = size.x / 2;
     final cardWidth = 80;
@@ -268,16 +275,20 @@ class CardGame extends FlameGame with TapDetector {
     }
   }
 
-  void checkGameOver() {
+  void checkGameOver() async {
     if (playerCardHealth.every((health) => health <= 0)) {
       gameOver = true;
-      removeAllExtraCards(); // Remover as cartas extras
+      removeAllExtraCards(); // Remove as cartas extras
       add(defeatAnimation); // Mostra animação de derrota
+      await audioPlayer.play(
+          AssetSource('sounds/defeat_sound.mp3')); // Tocar o som de derrota
       updateStatus("Você perdeu! Todas as suas cartas foram derrotadas.");
     } else if (computerCardHealth.every((health) => health <= 0)) {
       gameOver = true;
-      removeAllExtraCards(); // Remover as cartas extras
+      removeAllExtraCards(); // Remove as cartas extras
       add(victoryAnimation); // Mostra animação de vitória
+      await audioPlayer.play(
+          AssetSource('sounds/victory_sound.mp3')); // Tocar o som de vitória
       updateStatus(
           "Você venceu! Todas as cartas do computador foram derrotadas.");
     }
@@ -314,6 +325,8 @@ class CardGame extends FlameGame with TapDetector {
   }
 
   void resetGame() {
+    // Para o som atual, se estiver tocando
+    audioPlayer.stop();
     // Reinicia o estado do jogo
     gameOver = false;
     playerCardHealth = List.filled(4, maxHealth);
