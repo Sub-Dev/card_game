@@ -13,6 +13,7 @@ dependencies:
   flame: ^1.19.0 # ou a versão mais recente compatível
   flame_audio: ^1.0.0 # Para efeitos sonoros, se necessário
   cupertino_icons: ^1.0.8
+  audioplayers: ^3.0.1 # Corrigido para estar na seção de dependências
 
 dev_dependencies:
   flutter_test:
@@ -24,3 +25,5 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/sounds/victory_sound.mp3
+    - assets/sounds/defeat_sound.mp3
