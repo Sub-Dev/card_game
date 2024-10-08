@@ -6,11 +6,15 @@ import 'package:flame/input.dart';
 import 'package:flame/events.dart';
 import 'package:flame/sprite.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'dart:async';
 
 class CardGame extends FlameGame with TapDetector {
   late TextComponent statusText;
   late AudioPlayer audioPlayer;
   late AudioCache audioCache;
+
+  late SpriteAnimationComponent attackAnimation;
+
   List<SpriteComponent> cardSprites = [];
 
   // Lista de imagens das cartas
@@ -50,7 +54,7 @@ class CardGame extends FlameGame with TapDetector {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-
+    bool isAnimating = false;
     // Inicializa o AudioPlayer e carrega os sons
     audioPlayer = AudioPlayer();
     audioCache = AudioCache();
@@ -76,6 +80,26 @@ class CardGame extends FlameGame with TapDetector {
       cardSprites.add(card);
       add(card);
     }
+
+    // Carregar a animação de ataque
+    final attackSpriteSheet = await images.load('attack_image.png');
+    attackAnimation = SpriteAnimationComponent(
+      animation: SpriteAnimation.fromFrameData(
+        attackSpriteSheet,
+        SpriteAnimationData.variable(
+          // Adicionando a lista de frames com seus tempos específicos
+          stepTimes: [0.1, 0.1, 0.1, 0.1, 0.1], // Duração de cada frame
+          textureSize: Vector2(1500, 1400),
+          amount: 5, // Quantidade de frames na animação
+        ),
+      ),
+      size: Vector2(220, 200), // Reduz o tamanho da animação para caber na tela
+      position: Vector2(0,
+          0), // A posição será ajustada conforme a necessidade durante o ataque
+      priority: 999, // Para ficar na frente das cartas
+    );
+
+    attackAnimation.removeOnFinish = true;
 
     // Adicionar texto de status
     statusText = TextComponent(
@@ -166,11 +190,27 @@ class CardGame extends FlameGame with TapDetector {
     if (playerAttack >= computerDefense) {
       computerCardHealth[computerCardIndex] -=
           (playerAttack - computerDefense + 1);
+
+      // Adicionar a animação de ataque na posição da carta do computador
+      attackAnimation.position =
+          cardSprites[computerCardIndex].position + Vector2(50, 50);
+      add(attackAnimation);
+      Future.delayed(Duration(seconds: 1), () {
+        remove(attackAnimation); // Permite nova animação
+      });
     }
 
     // Computador ataca o jogador
     if (computerAttack >= playerDefense) {
       playerCardHealth[playerCardIndex] -= (computerAttack - playerDefense + 1);
+
+      // Adicionar a animação de ataque na posição da carta do jogador
+      attackAnimation.position =
+          cardSprites[playerCardIndex].position + Vector2(50, 50);
+      add(attackAnimation);
+      Future.delayed(Duration(seconds: 1), () {
+        remove(attackAnimation); // Permite nova animação
+      });
     }
 
     // Garantir que a vida não fique negativa
