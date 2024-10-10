@@ -54,11 +54,15 @@ class CardGame extends FlameGame with TapDetector {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    bool isAnimating = false;
     // Inicializa o AudioPlayer e carrega os sons
     audioPlayer = AudioPlayer();
     audioCache = AudioCache();
-    audioCache.loadAll(['victory_sound.mp3', 'defeat_sound.mp3']);
+    audioCache.loadAll([
+      'sounds/victory_sound.mp3',
+      'sounds/defeat_sound.mp3',
+      'sounds/attack_sound.mp3'
+    ]);
+
     // Carregar as imagens das cartas
     final centerX = size.x / 2;
     final cardWidth = 80;
@@ -191,12 +195,27 @@ class CardGame extends FlameGame with TapDetector {
       computerCardHealth[computerCardIndex] -=
           (playerAttack - computerDefense + 1);
 
-      // Adicionar a animação de ataque na posição da carta do computador
-      attackAnimation.position =
-          cardSprites[computerCardIndex].position + Vector2(50, 50);
+      // Calcular a posição da animação baseada na posição renderizada da carta do computador
+      final centerX = size.x / 2;
+      final centerY = size.y / 2;
+      Vector2 computerCardPosition =
+          Vector2(centerX + 50, centerY); // Posição da carta do computador
+
+      // Adicionar a animação de ataque na posição renderizada da carta do computador
+      attackAnimation.position = computerCardPosition;
+      attackAnimation.priority =
+          1000; // Prioridade alta para ficar por cima das cartas
+
       add(attackAnimation);
+      audioPlayer
+          .play(AssetSource('sounds/attack_sound.mp3'))
+          .catchError((error) {
+        print('Erro ao tocar o som: $error');
+      });
       Future.delayed(Duration(seconds: 1), () {
-        remove(attackAnimation); // Permite nova animação
+        if (children.contains(attackAnimation)) {
+          remove(attackAnimation);
+        }
       });
     }
 
@@ -204,10 +223,23 @@ class CardGame extends FlameGame with TapDetector {
     if (computerAttack >= playerDefense) {
       playerCardHealth[playerCardIndex] -= (computerAttack - playerDefense + 1);
 
-      // Adicionar a animação de ataque na posição da carta do jogador
-      attackAnimation.position =
-          cardSprites[playerCardIndex].position + Vector2(50, 50);
+      // Calcular a posição da animação baseada na posição renderizada da carta do jogador
+      final centerX = size.x / 2;
+      final centerY = size.y / 2;
+      Vector2 playerCardPosition =
+          Vector2(centerX - 180, centerY); // Posição da carta do jogador
+
+      // Adicionar a animação de ataque na posição renderizada da carta do jogador
+      attackAnimation.position = playerCardPosition;
+      attackAnimation.priority =
+          1000; // Prioridade alta para ficar por cima das cartas
+
       add(attackAnimation);
+      audioPlayer
+          .play(AssetSource('sounds/attack_sound.mp3'))
+          .catchError((error) {
+        print('Erro ao tocar o som: $error');
+      });
       Future.delayed(Duration(seconds: 1), () {
         remove(attackAnimation); // Permite nova animação
       });
@@ -222,8 +254,11 @@ class CardGame extends FlameGame with TapDetector {
             ? 0
             : computerCardHealth[computerCardIndex];
 
+    // Remover carta se a vida for zero
     if (playerCardHealth[playerCardIndex] <= 0) {
-      remove(cardSprites[playerCardIndex]);
+      if (children.contains(cardSprites[playerCardIndex])) {
+        remove(cardSprites[playerCardIndex]);
+      }
     }
   }
 
@@ -258,37 +293,51 @@ class CardGame extends FlameGame with TapDetector {
 
     // Renderiza a carta do jogador
     if (playerCardIndex != -1) {
-      _renderCard(canvas, playerCardIndex, Offset(centerX - 180, centerY),
+      _renderCard(playerCardIndex, Offset(centerX - 180, centerY));
+      _drawHealthBar(canvas, Offset(centerX - 180, centerY),
           playerCardHealth[playerCardIndex]);
     }
 
     // Renderiza a carta do computador
     if (computerCardIndex != -1) {
-      _renderCard(canvas, computerCardIndex, Offset(centerX + 50, centerY),
+      _renderCard(computerCardIndex, Offset(centerX + 50, centerY));
+      _drawHealthBar(canvas, Offset(centerX + 50, centerY),
           computerCardHealth[computerCardIndex]);
     }
   }
 
-  void _renderCard(Canvas canvas, int index, Offset position, int health) {
-    final image = images.fromCache(cards[index]);
+  void _renderCard(int index, Offset position) async {
+    // Carregar a imagem da carta como um sprite
+    String path = cards[index];
+    Sprite cardSprite = await loadSprite(path);
+
+    // Configura o SpriteComponent para a carta
     final cardWidth = 150.0;
     final cardHeight = 300.0;
 
-    final destinationRect =
-        Rect.fromLTWH(position.dx, position.dy, cardWidth, cardHeight);
+    SpriteComponent cardComponent = SpriteComponent(
+        sprite: cardSprite,
+        position:
+            Vector2(position.dx, position.dy), // Define a posição da carta
+        size: Vector2(cardWidth, cardHeight),
+        priority: 1 // Define o tamanho da carta
+        );
 
-    canvas.drawImageRect(
-      image,
-      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-      destinationRect,
-      Paint(),
-    );
+    // Adiciona a carta como um SpriteComponent no jogo
+    add(cardComponent);
+  }
 
-    // Desenhar a barra de vida
-    final healthBarWidth = cardWidth - 20;
+  // Método para desenhar a barra de vida
+  void _drawHealthBar(Canvas canvas, Offset position, int health) {
+    final cardWidth = 150.0;
+    final healthBarWidth = cardWidth - 5;
     final healthBarHeight = 10.0;
-    final healthBarX = position.dx + 10;
-    final healthBarY = position.dy + cardHeight + 10;
+
+    // Define a posição da barra de vida
+    final healthBarX = position.dx + 5;
+    final healthBarY = position.dy +
+        cardWidth +
+        165; // Abaixo da carta com um espaçamento de 15
 
     // Fundo da barra de vida
     canvas.drawRect(
@@ -306,12 +355,10 @@ class CardGame extends FlameGame with TapDetector {
   }
 
   void removeAllExtraCards() {
-    // Remove todas as cartas que não fazem parte das 4 cartas principais (player e computador)
     for (var card in cardSprites) {
-      if (!children.contains(card)) {
-        continue; // Se a carta já foi removida, pula
+      if (children.contains(card)) {
+        remove(card);
       }
-      remove(card); // Remove a carta do jogo
     }
   }
 
