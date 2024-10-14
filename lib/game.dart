@@ -54,6 +54,17 @@ class CardGame extends FlameGame with TapDetector {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+
+    // Carregar a imagem de fundo
+    final backgroundSprite = await loadSprite('background.png');
+
+    // Adicionar o fundo como SpriteComponent
+    final background = SpriteComponent(
+      sprite: backgroundSprite,
+      size: size, // Tamanho do fundo para cobrir a tela inteira
+      position: Vector2.zero(), // Iniciar no topo da tela
+    );
+    add(background);
     // Inicializa o AudioPlayer e carrega os sons
     audioPlayer = AudioPlayer();
     audioCache = AudioCache();
