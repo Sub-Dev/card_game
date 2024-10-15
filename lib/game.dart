@@ -13,6 +13,10 @@ class CardGame extends FlameGame with TapDetector {
   late AudioPlayer audioPlayer;
   late AudioCache audioCache;
 
+  final bool isMuted;
+  final String backgroundImage;
+
+  CardGame({required this.isMuted, required this.backgroundImage});
   late SpriteAnimationComponent attackAnimation;
 
   List<SpriteComponent> cardSprites = [];
@@ -55,8 +59,8 @@ class CardGame extends FlameGame with TapDetector {
   Future<void> onLoad() async {
     await super.onLoad();
 
-    // Carregar a imagem de fundo
-    final backgroundSprite = await loadSprite('background.png');
+    // Carregar a imagem de fundo passada pelo parâmetro
+    final backgroundSprite = await loadSprite(backgroundImage);
 
     // Adicionar o fundo como SpriteComponent
     final background = SpriteComponent(
@@ -65,7 +69,8 @@ class CardGame extends FlameGame with TapDetector {
       position: Vector2.zero(), // Iniciar no topo da tela
     );
     add(background);
-    // Inicializa o AudioPlayer e carrega os sons
+    // Inicializa o AudioPlayer e carrega os sons, muta se a opção for ativada
+
     audioPlayer = AudioPlayer();
     audioCache = AudioCache();
     audioCache.loadAll([
@@ -103,7 +108,7 @@ class CardGame extends FlameGame with TapDetector {
         attackSpriteSheet,
         SpriteAnimationData.variable(
           // Adicionando a lista de frames com seus tempos específicos
-          stepTimes: [0.1, 0.1, 0.1, 0.1, 0.1], // Duração de cada frame
+          stepTimes: [0.08, 0.08, 0.08, 0.08, 0.08], // Duração de cada frame
           textureSize: Vector2(1500, 1400),
           amount: 5, // Quantidade de frames na animação
         ),
@@ -218,11 +223,15 @@ class CardGame extends FlameGame with TapDetector {
           1000; // Prioridade alta para ficar por cima das cartas
 
       add(attackAnimation);
-      audioPlayer
-          .play(AssetSource('sounds/attack_sound.mp3'))
-          .catchError((error) {
-        print('Erro ao tocar o som: $error');
-      });
+
+      // Verifica se não está mudo antes de tocar o som
+      if (!isMuted) {
+        audioPlayer
+            .play(AssetSource('sounds/attack_sound.mp3'))
+            .catchError((error) {
+          print('Erro ao tocar o som: $error');
+        });
+      }
       Future.delayed(Duration(seconds: 1), () {
         if (children.contains(attackAnimation)) {
           remove(attackAnimation);
@@ -246,11 +255,14 @@ class CardGame extends FlameGame with TapDetector {
           1000; // Prioridade alta para ficar por cima das cartas
 
       add(attackAnimation);
-      audioPlayer
-          .play(AssetSource('sounds/attack_sound.mp3'))
-          .catchError((error) {
-        print('Erro ao tocar o som: $error');
-      });
+      // Verifica se não está mudo antes de tocar o som
+      if (!isMuted) {
+        audioPlayer
+            .play(AssetSource('sounds/attack_sound.mp3'))
+            .catchError((error) {
+          print('Erro ao tocar o som: $error');
+        });
+      }
       Future.delayed(Duration(seconds: 1), () {
         remove(attackAnimation); // Permite nova animação
       });
@@ -453,9 +465,14 @@ class CardGame extends FlameGame with TapDetector {
 }
 
 class CardGameWidget extends StatelessWidget {
+  final bool isMuted;
+  final String backgroundImage;
+
+  CardGameWidget({required this.isMuted, required this.backgroundImage});
+
   @override
   Widget build(BuildContext context) {
-    final game = CardGame();
+    final game = CardGame(isMuted: isMuted, backgroundImage: backgroundImage);
     return GameWidget(game: game);
   }
 }
