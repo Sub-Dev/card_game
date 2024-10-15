@@ -1,6 +1,6 @@
+// main.dart
 import 'package:flutter/material.dart';
-import 'package:flame/game.dart';
-import 'game.dart';
+import 'menu.dart'; // Importa o menu modularizado
 
 void main() {
   runApp(MyApp());
@@ -14,14 +14,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: Scaffold(
-        appBar: AppBar(
-          title: Text('Jogo de Cartas'),
-        ),
-        body: GameWidget(
-          game: CardGame(),
-        ),
-      ),
+      home: GameMenu(), // Usa o menu modularizado como tela principal
     );
   }
 }

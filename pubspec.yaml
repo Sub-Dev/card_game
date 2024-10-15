@@ -28,3 +28,4 @@ flutter:
     - assets/sounds/victory_sound.mp3
     - assets/sounds/defeat_sound.mp3
     - assets/sounds/attack_sound.mp3
+    - assets/sounds/menu_music.mp3
