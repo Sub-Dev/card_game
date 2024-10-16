@@ -7,6 +7,7 @@ import 'package:flame/events.dart';
 import 'package:flame/sprite.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'dart:async';
+import 'status_background_component.dart';
 
 class CardGame extends FlameGame with TapDetector {
   late TextComponent statusText;
@@ -15,6 +16,9 @@ class CardGame extends FlameGame with TapDetector {
 
   final bool isMuted;
   final String backgroundImage;
+
+  int playerLifeLost = 0;
+  int computerLifeLost = 0;
 
   CardGame({required this.isMuted, required this.backgroundImage});
   late SpriteAnimationComponent attackAnimation;
@@ -59,17 +63,14 @@ class CardGame extends FlameGame with TapDetector {
   Future<void> onLoad() async {
     await super.onLoad();
 
-    // Carregar a imagem de fundo passada pelo parâmetro
     final backgroundSprite = await loadSprite(backgroundImage);
 
-    // Adicionar o fundo como SpriteComponent
     final background = SpriteComponent(
       sprite: backgroundSprite,
-      size: size, // Tamanho do fundo para cobrir a tela inteira
-      position: Vector2.zero(), // Iniciar no topo da tela
+      size: size,
+      position: Vector2.zero(),
     );
     add(background);
-    // Inicializa o AudioPlayer e carrega os sons, muta se a opção for ativada
 
     audioPlayer = AudioPlayer();
     audioCache = AudioCache();
@@ -79,8 +80,7 @@ class CardGame extends FlameGame with TapDetector {
       'sounds/attack_sound.mp3'
     ]);
 
-    // Carregar as imagens das cartas
-    final centerX = size.x / 2;
+    final centerX = size.x / 2.1;
     final cardWidth = 80;
     final cardSpacing = 20;
 
@@ -101,34 +101,53 @@ class CardGame extends FlameGame with TapDetector {
       add(card);
     }
 
-    // Carregar a animação de ataque
     final attackSpriteSheet = await images.load('attack_image.png');
     attackAnimation = SpriteAnimationComponent(
       animation: SpriteAnimation.fromFrameData(
         attackSpriteSheet,
         SpriteAnimationData.variable(
-          // Adicionando a lista de frames com seus tempos específicos
-          stepTimes: [0.08, 0.08, 0.08, 0.08, 0.08], // Duração de cada frame
+          stepTimes: [0.08, 0.08, 0.08, 0.08, 0.08],
           textureSize: Vector2(1500, 1400),
-          amount: 5, // Quantidade de frames na animação
+          amount: 5,
         ),
       ),
-      size: Vector2(220, 200), // Reduz o tamanho da animação para caber na tela
-      position: Vector2(0,
-          0), // A posição será ajustada conforme a necessidade durante o ataque
-      priority: 999, // Para ficar na frente das cartas
+      size: Vector2(220, 200),
+      position: Vector2(0, 0),
+      priority: 999,
     );
 
     attackAnimation.removeOnFinish = true;
 
-    // Adicionar texto de status
     statusText = TextComponent(
       text: 'Toque em uma carta para jogar',
       position: Vector2(10, 10),
       textRenderer: TextPaint(
-        style: TextStyle(color: Colors.white, fontSize: 20),
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          shadows: [
+            Shadow(
+              offset: Offset(2.0, 2.0),
+              blurRadius: 3.0,
+              color: Colors.black,
+            ),
+          ],
+        ),
       ),
     );
+// Suponha que você tenha uma referência à largura da tela
+    final screenSize = size; // tamanho da tela do jogo
+
+// Posição do texto
+    final textPosition = statusText.position;
+
+// Cria o fundo com a largura da tela e a posição do texto
+    final statusBackground =
+        StatusBackgroundComponent(screenSize, textPosition);
+    add(statusBackground); // Adiciona o fundo ao jogo
+
+// Adiciona o texto acima do fundo
     add(statusText);
 
     // Carregar animações de vitória e derrota
@@ -208,8 +227,9 @@ class CardGame extends FlameGame with TapDetector {
 
     // Jogador ataca o computador
     if (playerAttack >= computerDefense) {
-      computerCardHealth[computerCardIndex] -=
-          (playerAttack - computerDefense + 1);
+      int damage = (playerAttack - computerDefense + 1);
+      computerCardHealth[computerCardIndex] -= damage;
+      computerLifeLost += damage; // Atualiza vida perdida
 
       // Calcular a posição da animação baseada na posição renderizada da carta do computador
       final centerX = size.x / 2;
@@ -223,7 +243,7 @@ class CardGame extends FlameGame with TapDetector {
           1000; // Prioridade alta para ficar por cima das cartas
 
       add(attackAnimation);
-
+      _showLifeLostAnimation(damage.toString(), computerCardPosition);
       // Verifica se não está mudo antes de tocar o som
       if (!isMuted) {
         audioPlayer
@@ -241,7 +261,9 @@ class CardGame extends FlameGame with TapDetector {
 
     // Computador ataca o jogador
     if (computerAttack >= playerDefense) {
-      playerCardHealth[playerCardIndex] -= (computerAttack - playerDefense + 1);
+      int damage = (computerAttack - playerDefense + 1);
+      playerCardHealth[playerCardIndex] -= damage;
+      playerLifeLost += damage; // Atualiza vida perdida
 
       // Calcular a posição da animação baseada na posição renderizada da carta do jogador
       final centerX = size.x / 2;
@@ -255,6 +277,7 @@ class CardGame extends FlameGame with TapDetector {
           1000; // Prioridade alta para ficar por cima das cartas
 
       add(attackAnimation);
+      _showLifeLostAnimation(damage.toString(), playerCardPosition);
       // Verifica se não está mudo antes de tocar o som
       if (!isMuted) {
         audioPlayer
@@ -285,6 +308,84 @@ class CardGame extends FlameGame with TapDetector {
     }
   }
 
+  void _showLifeLostAnimation(String damage, Vector2 position) {
+    // Criar um círculo como fundo
+    final circle = CircleComponent(
+      radius: 40, // Ajuste o tamanho do círculo conforme necessário
+      position: position.clone(), // Posição inicial
+      paint: Paint()
+        ..color = Colors.black.withOpacity(0.8), // Cor de fundo com opacidade
+      priority: 1000, // Prioridade do círculo
+    );
+
+    // Criar o texto que será exibido sobre o círculo
+    final lifeLostText = TextComponent(
+      text: '-$damage',
+      position: position.clone(), // Posição inicial
+      textRenderer: TextPaint(
+        style: TextStyle(
+          color: Colors.red,
+          fontSize: 30,
+          fontWeight: FontWeight.bold,
+          shadows: [
+            Shadow(
+              offset: Offset(1.0, 1.0),
+              blurRadius: 3.0,
+              color: Colors.black,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    lifeLostText.priority =
+        1001; // Prioridade do texto deve ser maior que a do círculo
+
+    // Adicionar o círculo e o texto à cena
+    add(circle);
+    add(lifeLostText);
+
+    // Animação para mover ambos (círculo e texto) para cima
+    Future.delayed(Duration.zero, () {
+      // Define a animação de movimento para cima
+      circle.position.y -= -150;
+      lifeLostText.position.y -= -170;
+      circle.position.x -= -40;
+      lifeLostText.position.x -= -65;
+
+      // Fade out do texto
+      Future.delayed(Duration(seconds: 1), () {
+        lifeLostText.textRenderer = TextPaint(
+          style: TextStyle(
+            color: Colors.transparent, // Nova cor do texto
+            fontSize: 30,
+            fontWeight: FontWeight.bold,
+            shadows: [
+              Shadow(
+                offset: Offset(1.0, 1.0),
+                blurRadius: 3.0,
+                color: Colors.black,
+              ),
+            ],
+          ),
+        );
+
+        Future.delayed(Duration(milliseconds: 300), () {
+          remove(lifeLostText); // Remove o texto após a animação
+        });
+      });
+
+      // Fade out do círculo
+      Future.delayed(Duration(seconds: 1), () {
+        circle.paint.color =
+            Colors.transparent; // Faz o círculo ficar invisível
+        Future.delayed(Duration(milliseconds: 300), () {
+          remove(circle); // Remove o círculo após a animação
+        });
+      });
+    });
+  }
+
   void updateStatus([String? customMessage]) {
     String result;
     if (customMessage != null) {
@@ -296,7 +397,7 @@ class CardGame extends FlameGame with TapDetector {
     }
 
     statusText.text =
-        "$result\nVidas do Jogador: ${playerCardHealth.join(", ")}\nVidas do Computador: ${computerCardHealth.join(", ")}";
+        "$result\nVidas do Jogador: ${playerCardHealth.join(", ")} (Vida Perdida: $playerLifeLost)\nVidas do Computador: ${computerCardHealth.join(", ")} (Vida Perdida: $computerLifeLost)";
   }
 
   @override
@@ -350,21 +451,22 @@ class CardGame extends FlameGame with TapDetector {
     add(cardComponent);
   }
 
-  // Método para desenhar a barra de vida
   void _drawHealthBar(Canvas canvas, Offset position, int health) {
     final cardWidth = 150.0;
     final healthBarWidth = cardWidth - 5;
     final healthBarHeight = 10.0;
 
-    // Define a posição da barra de vida
-    final healthBarX = position.dx + 5;
-    final healthBarY = position.dy +
-        cardWidth +
-        165; // Abaixo da carta com um espaçamento de 15
+    // Escolhe a cor da barra com base na vida restante
+    Color healthColor = health > 6
+        ? Colors.green
+        : health > 3
+            ? Colors.orange
+            : Colors.red;
 
+    final healthBarY = position.dy + 310;
     // Fundo da barra de vida
     canvas.drawRect(
-      Rect.fromLTWH(healthBarX, healthBarY, healthBarWidth, healthBarHeight),
+      Rect.fromLTWH(position.dx, healthBarY, healthBarWidth, healthBarHeight),
       Paint()..color = Colors.grey,
     );
 
@@ -372,8 +474,8 @@ class CardGame extends FlameGame with TapDetector {
     final currentHealthWidth = (health / maxHealth) * healthBarWidth;
     canvas.drawRect(
       Rect.fromLTWH(
-          healthBarX, healthBarY, currentHealthWidth, healthBarHeight),
-      Paint()..color = Colors.red,
+          position.dx, healthBarY, currentHealthWidth, healthBarHeight),
+      Paint()..color = healthColor,
     );
   }
 
@@ -458,7 +560,8 @@ class CardGame extends FlameGame with TapDetector {
         add(card); // Adiciona novamente as cartas removidas
       }
     }
-
+    playerLifeLost = 0; // Resetar vida perdida
+    computerLifeLost = 0; // Resetar vida perdida
     // Atualiza o status do jogo
     updateStatus("Jogo reiniciado. Toque em uma carta para jogar.");
   }
