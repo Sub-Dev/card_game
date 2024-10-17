@@ -12,12 +12,12 @@ class _GameMenuState extends State<GameMenu> {
   String backgroundImage = 'background1.png'; // Padrão
   late AudioPlayer _audioPlayer;
   double _volume = 0.5; // Volume padrão
+  bool isMusicPlaying = false;
 
   @override
   void initState() {
     super.initState();
     _audioPlayer = AudioPlayer();
-    _playBackgroundMusic();
   }
 
   @override
@@ -26,13 +26,22 @@ class _GameMenuState extends State<GameMenu> {
     super.dispose();
   }
 
+  void _onUserInteraction() {
+    if (!isSoundMuted && !isMusicPlaying) {
+      _playBackgroundMusic();
+    }
+  }
+
   // Tocar música de fundo
   void _playBackgroundMusic() async {
     if (!isSoundMuted) {
+      // Verifica se a música não está tocando
       await _audioPlayer.setSource(AssetSource('sounds/menu_music.mp3'));
       _audioPlayer.setVolume(_volume); // Configura o volume
       _audioPlayer.setReleaseMode(ReleaseMode.loop);
-      _audioPlayer.resume();
+      await _audioPlayer
+          .resume(); // Adicionando 'await' para garantir que a música seja reproduzida
+      isMusicPlaying = true; // Marca a música como tocando
     }
   }
 
@@ -81,61 +90,64 @@ class _GameMenuState extends State<GameMenu> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/images/$backgroundImage'),
-            fit: BoxFit.cover,
+      body: GestureDetector(
+        onTap: _onUserInteraction, // Chama a função ao tocar na tela
+        child: Container(
+          decoration: BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/images/$backgroundImage'),
+              fit: BoxFit.cover,
+            ),
           ),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              // Logo na parte superior
-              Image.asset(
-                'images/logo.png', // Caminho para o logo
-                fit: BoxFit.contain,
-                height: MediaQuery.of(context).size.height *
-                    0.5, // Ajusta a altura do logo
-              ),
-              SizedBox(height: 20), // Espaço abaixo do logo
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => CardGameWidget(
-                        isMuted: isSoundMuted, // Ajustado para "isMuted"
-                        backgroundImage: backgroundImage,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                // Logo na parte superior
+                Image.asset(
+                  'images/logo.png', // Caminho para o logo
+                  fit: BoxFit.contain,
+                  height: MediaQuery.of(context).size.height *
+                      0.5, // Ajusta a altura do logo
+                ),
+                SizedBox(height: 20), // Espaço abaixo do logo
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CardGameWidget(
+                          isMuted: isSoundMuted, // Ajustado para "isMuted"
+                          backgroundImage: backgroundImage,
+                        ),
                       ),
-                    ),
-                  );
-                },
-                child: Text('Iniciar Jogo'),
-              ),
-              SizedBox(height: 16), // Espaçamento entre botões
-              ElevatedButton(
-                onPressed: () {
-                  _showOptions(context);
-                },
-                child: Text('Opções'),
-              ),
-              SizedBox(height: 16), // Espaçamento entre botões
-              ElevatedButton(
-                onPressed: () {
-                  // Fechar o app
-                  Navigator.of(context).pop();
-                },
-                child: Text('Sair'),
-              ),
-              SizedBox(height: 16), // Espaçamento entre botões
-              ElevatedButton(
-                onPressed: () => _toggleSound(
-                    !isSoundMuted), // Passa o valor oposto para o método
-                child: Text(isSoundMuted ? 'Ativar Música' : 'Mutar Música'),
-              ),
-            ],
+                    );
+                  },
+                  child: Text('Iniciar Jogo'),
+                ),
+                SizedBox(height: 16), // Espaçamento entre botões
+                ElevatedButton(
+                  onPressed: () {
+                    _showOptions(context);
+                  },
+                  child: Text('Opções'),
+                ),
+                SizedBox(height: 16), // Espaçamento entre botões
+                ElevatedButton(
+                  onPressed: () {
+                    // Fechar o app
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('Sair'),
+                ),
+                SizedBox(height: 16), // Espaçamento entre botões
+                ElevatedButton(
+                  onPressed: () => _toggleSound(
+                      !isSoundMuted), // Passa o valor oposto para o método
+                  child: Text(isSoundMuted ? 'Ativar Música' : 'Mutar Música'),
+                ),
+              ],
+            ),
           ),
         ),
       ),

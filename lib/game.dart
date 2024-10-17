@@ -287,7 +287,9 @@ class CardGame extends FlameGame with TapDetector {
         });
       }
       Future.delayed(Duration(seconds: 1), () {
-        remove(attackAnimation); // Permite nova animação
+        if (children.contains(attackAnimation)) {
+          remove(attackAnimation);
+        }
       });
     }
 
@@ -430,7 +432,14 @@ class CardGame extends FlameGame with TapDetector {
     }
   }
 
+  SpriteComponent? currentCardComponent;
+
   void _renderCard(int index, Offset position) async {
+    // Remover o componente atual, se houver
+    if (currentCardComponent != null) {
+      remove(currentCardComponent!);
+    }
+
     // Carregar a imagem da carta como um sprite
     String path = cards[index];
     Sprite cardSprite = await loadSprite(path);
@@ -439,16 +448,15 @@ class CardGame extends FlameGame with TapDetector {
     final cardWidth = 150.0;
     final cardHeight = 300.0;
 
-    SpriteComponent cardComponent = SpriteComponent(
-        sprite: cardSprite,
-        position:
-            Vector2(position.dx, position.dy), // Define a posição da carta
-        size: Vector2(cardWidth, cardHeight),
-        priority: 1 // Define o tamanho da carta
-        );
+    currentCardComponent = SpriteComponent(
+      sprite: cardSprite,
+      position: Vector2(position.dx, position.dy), // Define a posição da carta
+      size: Vector2(cardWidth, cardHeight),
+      priority: 1, // Define a prioridade para a animação ou efeito visual
+    );
 
     // Adiciona a carta como um SpriteComponent no jogo
-    add(cardComponent);
+    add(currentCardComponent!);
   }
 
   void _drawHealthBar(Canvas canvas, Offset position, int health) {
@@ -481,8 +489,9 @@ class CardGame extends FlameGame with TapDetector {
 
   void removeAllExtraCards() {
     for (var card in cardSprites) {
-      if (children.contains(card)) {
-        remove(card);
+      // Verifica se o cartão está montado (ou seja, se pertence à árvore de componentes)
+      if (card.isMounted) {
+        remove(card); // Remove o cartão se ele estiver montado
       }
     }
   }
@@ -537,16 +546,14 @@ class CardGame extends FlameGame with TapDetector {
   }
 
   void resetGame() {
-    // Para o som atual, se estiver tocando
-    audioPlayer.stop();
-    // Reinicia o estado do jogo
-    gameOver = false;
+    audioPlayer.stop(); // Para o som atual
+    gameOver = false; // Reinicia o estado do jogo
     playerCardHealth = List.filled(4, maxHealth);
     computerCardHealth = List.filled(4, maxHealth);
     playerCardIndex = -1;
     computerCardIndex = -1;
 
-    // Limpa as animações de vitória ou derrota, se estiverem presentes
+    // Remover animações de vitória ou derrota
     if (children.contains(victoryAnimation)) {
       remove(victoryAnimation);
     }
@@ -554,16 +561,18 @@ class CardGame extends FlameGame with TapDetector {
       remove(defeatAnimation);
     }
 
-    // Adiciona novamente as cartas ao jogo
+    // Adicionar novamente as cartas removidas ao jogo
     for (var card in cardSprites) {
       if (!children.contains(card)) {
-        add(card); // Adiciona novamente as cartas removidas
+        add(card);
       }
     }
-    playerLifeLost = 0; // Resetar vida perdida
-    computerLifeLost = 0; // Resetar vida perdida
+
+    playerLifeLost = 0;
+    computerLifeLost = 0;
+
     // Atualiza o status do jogo
-    updateStatus("Jogo reiniciado. Toque em uma carta para jogar.");
+    updateStatus("Jogo reiniciado. Toque em uma carta para começar.");
   }
 }
 
