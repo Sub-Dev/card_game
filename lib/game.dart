@@ -25,7 +25,6 @@ class CardGame extends FlameGame with TapDetector {
 
   List<SpriteComponent> cardSprites = [];
 
-  // Lista de imagens das cartas
   List<String> cards = [
     'card_0.png',
     'card_1.png',
@@ -33,7 +32,6 @@ class CardGame extends FlameGame with TapDetector {
     'card_3.png',
   ];
 
-  // Nomes correspondentes das cartas
   List<String> cardNames = [
     'Hydra',
     'Minotaur',
@@ -44,15 +42,12 @@ class CardGame extends FlameGame with TapDetector {
   int playerCardIndex = -1;
   int computerCardIndex = -1;
 
-  // Propriedades de ataque e defesa
   List<int> cardAttack = [3, 4, 2, 5];
   List<int> cardDefense = [2, 3, 4, 1];
 
-  // Vida separada para jogador e computador
   List<int> playerCardHealth = [10, 10, 10, 10];
   List<int> computerCardHealth = [10, 10, 10, 10];
 
-  // Vida máxima das cartas
   final int maxHealth = 10;
 
   late SpriteAnimationComponent victoryAnimation;
@@ -136,21 +131,16 @@ class CardGame extends FlameGame with TapDetector {
         ),
       ),
     );
-// Suponha que você tenha uma referência à largura da tela
-    final screenSize = size; // tamanho da tela do jogo
+    final screenSize = size;
 
-// Posição do texto
     final textPosition = statusText.position;
 
-// Cria o fundo com a largura da tela e a posição do texto
     final statusBackground =
         StatusBackgroundComponent(screenSize, textPosition);
-    add(statusBackground); // Adiciona o fundo ao jogo
+    add(statusBackground);
 
-// Adiciona o texto acima do fundo
     add(statusText);
 
-    // Carregar animações de vitória e derrota
     final victorySpriteSheet = await images.load('victory_animation.png');
     final defeatSpriteSheet = await images.load('defeat_animation.png');
 
@@ -158,34 +148,28 @@ class CardGame extends FlameGame with TapDetector {
       animation: SpriteAnimation.fromFrameData(
         victorySpriteSheet,
         SpriteAnimationData.sequenced(
-          amount: 1, // Ajuste conforme o número de frames da sua animação
+          amount: 1,
           stepTime: 1.0,
-          textureSize:
-              Vector2(512, 512), // Ajuste conforme o tamanho dos frames
+          textureSize: Vector2(512, 512),
         ),
       ),
-      size: Vector2(512, 512), // Aumentando o tamanho da animação
-      // Ajustando a posição para ficar mais à direita e mais para baixo
-      position: Vector2(
-          (size.x - 512) / 2 + 150, (size.y - 512) / 2 + 150), // Centralizando
-      priority: 99999, // Aumentando a prioridade para ficar na frente
+      size: Vector2(512, 512),
+      position: Vector2((size.x - 512) / 2 + 150, (size.y - 512) / 2 + 150),
+      priority: 99999,
     );
 
     defeatAnimation = SpriteAnimationComponent(
       animation: SpriteAnimation.fromFrameData(
         defeatSpriteSheet,
         SpriteAnimationData.sequenced(
-          amount: 1, // Ajuste conforme o número de frames da sua animação
+          amount: 1,
           stepTime: 1.0,
-          textureSize:
-              Vector2(512, 512), // Ajuste conforme o tamanho dos frames
+          textureSize: Vector2(512, 512),
         ),
       ),
-      size: Vector2(512, 512), // Aumentando o tamanho da animação
-      // Ajustando a posição para ficar mais à direita e mais para baixo
-      position: Vector2(
-          (size.x - 512) / 2 + 150, (size.y - 512) / 2 + 150), // Centralizando
-      priority: 99999, // Aumentando a prioridade para ficar na frente
+      size: Vector2(512, 512),
+      position: Vector2((size.x - 512) / 2 + 150, (size.y - 512) / 2 + 150),
+      priority: 99999,
     );
 
     victoryAnimation.removeOnFinish = true;
@@ -219,32 +203,44 @@ class CardGame extends FlameGame with TapDetector {
     updateStatus();
   }
 
+  bool isCriticalHit() {
+    Random random = Random();
+    return random.nextDouble() < 0.2;
+  }
+
+  int calculateDamage(int attack, int defense, bool criticalHit) {
+    if (criticalHit) {
+      return attack * 2;
+    } else {
+      return attack >= defense ? attack - defense : 0;
+    }
+  }
+
   void compareCombat() {
     int playerAttack = cardAttack[playerCardIndex];
     int computerDefense = cardDefense[computerCardIndex];
     int computerAttack = cardAttack[computerCardIndex];
     int playerDefense = cardDefense[playerCardIndex];
 
-    // Jogador ataca o computador
-    if (playerAttack >= computerDefense) {
-      int damage = (playerAttack - computerDefense + 1);
-      computerCardHealth[computerCardIndex] -= damage;
-      computerLifeLost += damage; // Atualiza vida perdida
+    bool playerCriticalHit = isCriticalHit();
+    int playerDamage =
+        calculateDamage(playerAttack, computerDefense, playerCriticalHit);
 
-      // Calcular a posição da animação baseada na posição renderizada da carta do computador
+    if (playerDamage > 0) {
+      computerCardHealth[computerCardIndex] -= playerDamage;
+      computerLifeLost += playerDamage;
+
       final centerX = size.x / 2;
       final centerY = size.y / 2;
-      Vector2 computerCardPosition =
-          Vector2(centerX + 50, centerY); // Posição da carta do computador
+      Vector2 computerCardPosition = Vector2(centerX + 50, centerY);
 
-      // Adicionar a animação de ataque na posição renderizada da carta do computador
       attackAnimation.position = computerCardPosition;
-      attackAnimation.priority =
-          1000; // Prioridade alta para ficar por cima das cartas
+      attackAnimation.priority = 1000;
 
       add(attackAnimation);
-      _showLifeLostAnimation(damage.toString(), computerCardPosition);
-      // Verifica se não está mudo antes de tocar o som
+      _showLifeLostAnimation(playerDamage.toString(), computerCardPosition,
+          isCritical: playerCriticalHit);
+
       if (!isMuted) {
         audioPlayer
             .play(AssetSource('sounds/attack_sound.mp3'))
@@ -252,6 +248,7 @@ class CardGame extends FlameGame with TapDetector {
           print('Erro ao tocar o som: $error');
         });
       }
+
       Future.delayed(Duration(seconds: 1), () {
         if (children.contains(attackAnimation)) {
           remove(attackAnimation);
@@ -259,26 +256,25 @@ class CardGame extends FlameGame with TapDetector {
       });
     }
 
-    // Computador ataca o jogador
-    if (computerAttack >= playerDefense) {
-      int damage = (computerAttack - playerDefense + 1);
-      playerCardHealth[playerCardIndex] -= damage;
-      playerLifeLost += damage; // Atualiza vida perdida
+    bool computerCriticalHit = isCriticalHit();
+    int computerDamage =
+        calculateDamage(computerAttack, playerDefense, computerCriticalHit);
 
-      // Calcular a posição da animação baseada na posição renderizada da carta do jogador
+    if (computerDamage > 0) {
+      playerCardHealth[playerCardIndex] -= computerDamage;
+      playerLifeLost += computerDamage;
+
       final centerX = size.x / 2;
       final centerY = size.y / 2;
-      Vector2 playerCardPosition =
-          Vector2(centerX - 180, centerY); // Posição da carta do jogador
+      Vector2 playerCardPosition = Vector2(centerX - 180, centerY);
 
-      // Adicionar a animação de ataque na posição renderizada da carta do jogador
       attackAnimation.position = playerCardPosition;
-      attackAnimation.priority =
-          1000; // Prioridade alta para ficar por cima das cartas
+      attackAnimation.priority = 1000;
 
       add(attackAnimation);
-      _showLifeLostAnimation(damage.toString(), playerCardPosition);
-      // Verifica se não está mudo antes de tocar o som
+      _showLifeLostAnimation(computerDamage.toString(), playerCardPosition,
+          isCritical: computerCriticalHit);
+
       if (!isMuted) {
         audioPlayer
             .play(AssetSource('sounds/attack_sound.mp3'))
@@ -286,6 +282,7 @@ class CardGame extends FlameGame with TapDetector {
           print('Erro ao tocar o som: $error');
         });
       }
+
       Future.delayed(Duration(seconds: 1), () {
         if (children.contains(attackAnimation)) {
           remove(attackAnimation);
@@ -293,7 +290,6 @@ class CardGame extends FlameGame with TapDetector {
       });
     }
 
-    // Garantir que a vida não fique negativa
     playerCardHealth[playerCardIndex] = playerCardHealth[playerCardIndex] < 0
         ? 0
         : playerCardHealth[playerCardIndex];
@@ -302,7 +298,6 @@ class CardGame extends FlameGame with TapDetector {
             ? 0
             : computerCardHealth[computerCardIndex];
 
-    // Remover carta se a vida for zero
     if (playerCardHealth[playerCardIndex] <= 0) {
       if (children.contains(cardSprites[playerCardIndex])) {
         remove(cardSprites[playerCardIndex]);
@@ -310,29 +305,30 @@ class CardGame extends FlameGame with TapDetector {
     }
   }
 
-  void _showLifeLostAnimation(String damage, Vector2 position) {
-    // Criar um círculo como fundo
+  void _showLifeLostAnimation(String damage, Vector2 position,
+      {bool isCritical = false}) {
     final circle = CircleComponent(
-      radius: 40, // Ajuste o tamanho do círculo conforme necessário
-      position: position.clone(), // Posição inicial
+      radius: 40,
+      position: position.clone(),
       paint: Paint()
-        ..color = Colors.black.withOpacity(0.8), // Cor de fundo com opacidade
-      priority: 1000, // Prioridade do círculo
+        ..color = isCritical
+            ? Colors.orange.withOpacity(0.9)
+            : Colors.black.withOpacity(0.8),
+      priority: 1000,
     );
 
-    // Criar o texto que será exibido sobre o círculo
     final lifeLostText = TextComponent(
-      text: '-$damage',
-      position: position.clone(), // Posição inicial
+      text: isCritical ? 'CRITICAL! -$damage' : '-$damage',
+      position: position.clone(),
       textRenderer: TextPaint(
         style: TextStyle(
-          color: Colors.red,
-          fontSize: 30,
+          color: isCritical ? Colors.yellow : Colors.red,
+          fontSize: isCritical ? 25 : 30,
           fontWeight: FontWeight.bold,
           shadows: [
             Shadow(
               offset: Offset(1.0, 1.0),
-              blurRadius: 3.0,
+              blurRadius: isCritical ? 5.0 : 3.0,
               color: Colors.black,
             ),
           ],
@@ -340,26 +336,21 @@ class CardGame extends FlameGame with TapDetector {
       ),
     );
 
-    lifeLostText.priority =
-        1001; // Prioridade do texto deve ser maior que a do círculo
+    lifeLostText.priority = 1001;
 
-    // Adicionar o círculo e o texto à cena
     add(circle);
     add(lifeLostText);
 
-    // Animação para mover ambos (círculo e texto) para cima
     Future.delayed(Duration.zero, () {
-      // Define a animação de movimento para cima
       circle.position.y -= -150;
       lifeLostText.position.y -= -170;
       circle.position.x -= -40;
       lifeLostText.position.x -= -65;
 
-      // Fade out do texto
       Future.delayed(Duration(seconds: 1), () {
         lifeLostText.textRenderer = TextPaint(
           style: TextStyle(
-            color: Colors.transparent, // Nova cor do texto
+            color: Colors.transparent,
             fontSize: 30,
             fontWeight: FontWeight.bold,
             shadows: [
@@ -373,16 +364,14 @@ class CardGame extends FlameGame with TapDetector {
         );
 
         Future.delayed(Duration(milliseconds: 300), () {
-          remove(lifeLostText); // Remove o texto após a animação
+          remove(lifeLostText);
         });
       });
 
-      // Fade out do círculo
       Future.delayed(Duration(seconds: 1), () {
-        circle.paint.color =
-            Colors.transparent; // Faz o círculo ficar invisível
+        circle.paint.color = Colors.transparent;
         Future.delayed(Duration(milliseconds: 300), () {
-          remove(circle); // Remove o círculo após a animação
+          remove(circle);
         });
       });
     });
@@ -406,25 +395,21 @@ class CardGame extends FlameGame with TapDetector {
   void render(Canvas canvas) {
     super.render(canvas);
 
-    // Centralizar o texto de status
     final screenSize = size;
     final centerX = screenSize.x / 2;
     final centerY = screenSize.y / 2;
     statusText.position = Vector2(centerX - (statusText.width / 2), 10);
 
-    // Verifica se o jogo acabou, se sim, não renderiza as cartas
     if (gameOver) {
-      return; // Não renderiza cartas após o jogo terminar
+      return;
     }
 
-    // Renderiza a carta do jogador
     if (playerCardIndex != -1) {
       _renderCard(playerCardIndex, Offset(centerX - 180, centerY));
       _drawHealthBar(canvas, Offset(centerX - 180, centerY),
           playerCardHealth[playerCardIndex]);
     }
 
-    // Renderiza a carta do computador
     if (computerCardIndex != -1) {
       _renderCard(computerCardIndex, Offset(centerX + 50, centerY));
       _drawHealthBar(canvas, Offset(centerX + 50, centerY),
@@ -435,27 +420,23 @@ class CardGame extends FlameGame with TapDetector {
   SpriteComponent? currentCardComponent;
 
   void _renderCard(int index, Offset position) async {
-    // Remover o componente atual, se houver
     if (currentCardComponent != null) {
       remove(currentCardComponent!);
     }
 
-    // Carregar a imagem da carta como um sprite
     String path = cards[index];
     Sprite cardSprite = await loadSprite(path);
 
-    // Configura o SpriteComponent para a carta
     final cardWidth = 150.0;
     final cardHeight = 300.0;
 
     currentCardComponent = SpriteComponent(
       sprite: cardSprite,
-      position: Vector2(position.dx, position.dy), // Define a posição da carta
+      position: Vector2(position.dx, position.dy),
       size: Vector2(cardWidth, cardHeight),
-      priority: 1, // Define a prioridade para a animação ou efeito visual
+      priority: 1,
     );
 
-    // Adiciona a carta como um SpriteComponent no jogo
     add(currentCardComponent!);
   }
 
@@ -464,7 +445,6 @@ class CardGame extends FlameGame with TapDetector {
     final healthBarWidth = cardWidth - 5;
     final healthBarHeight = 10.0;
 
-    // Escolhe a cor da barra com base na vida restante
     Color healthColor = health > 6
         ? Colors.green
         : health > 3
@@ -472,13 +452,11 @@ class CardGame extends FlameGame with TapDetector {
             : Colors.red;
 
     final healthBarY = position.dy + 310;
-    // Fundo da barra de vida
     canvas.drawRect(
       Rect.fromLTWH(position.dx, healthBarY, healthBarWidth, healthBarHeight),
       Paint()..color = Colors.grey,
     );
 
-    // Barra de vida atual
     final currentHealthWidth = (health / maxHealth) * healthBarWidth;
     canvas.drawRect(
       Rect.fromLTWH(
@@ -489,9 +467,8 @@ class CardGame extends FlameGame with TapDetector {
 
   void removeAllExtraCards() {
     for (var card in cardSprites) {
-      // Verifica se o cartão está montado (ou seja, se pertence à árvore de componentes)
       if (card.isMounted) {
-        remove(card); // Remove o cartão se ele estiver montado
+        remove(card);
       }
     }
   }
@@ -499,17 +476,15 @@ class CardGame extends FlameGame with TapDetector {
   void checkGameOver() async {
     if (playerCardHealth.every((health) => health <= 0)) {
       gameOver = true;
-      removeAllExtraCards(); // Remove as cartas extras
-      add(defeatAnimation); // Mostra animação de derrota
-      await audioPlayer.play(
-          AssetSource('sounds/defeat_sound.mp3')); // Tocar o som de derrota
+      removeAllExtraCards();
+      add(defeatAnimation);
+      await audioPlayer.play(AssetSource('sounds/defeat_sound.mp3'));
       updateStatus("Você perdeu! Todas as suas cartas foram derrotadas.");
     } else if (computerCardHealth.every((health) => health <= 0)) {
       gameOver = true;
-      removeAllExtraCards(); // Remove as cartas extras
-      add(victoryAnimation); // Mostra animação de vitória
-      await audioPlayer.play(
-          AssetSource('sounds/victory_sound.mp3')); // Tocar o som de vitória
+      removeAllExtraCards();
+      add(victoryAnimation);
+      await audioPlayer.play(AssetSource('sounds/victory_sound.mp3'));
       updateStatus(
           "Você venceu! Todas as cartas do computador foram derrotadas.");
     }
@@ -534,26 +509,24 @@ class CardGame extends FlameGame with TapDetector {
         }
       }
     } else {
-      // Remover animações de vitória e derrota ao clicar, se estiverem no jogo
       if (children.contains(victoryAnimation)) {
         remove(victoryAnimation);
       }
       if (children.contains(defeatAnimation)) {
         remove(defeatAnimation);
       }
-      resetGame(); // Reinicia o jogo após remover as animações
+      resetGame();
     }
   }
 
   void resetGame() {
-    audioPlayer.stop(); // Para o som atual
-    gameOver = false; // Reinicia o estado do jogo
+    audioPlayer.stop();
+    gameOver = false;
     playerCardHealth = List.filled(4, maxHealth);
     computerCardHealth = List.filled(4, maxHealth);
     playerCardIndex = -1;
     computerCardIndex = -1;
 
-    // Remover animações de vitória ou derrota
     if (children.contains(victoryAnimation)) {
       remove(victoryAnimation);
     }
@@ -561,7 +534,6 @@ class CardGame extends FlameGame with TapDetector {
       remove(defeatAnimation);
     }
 
-    // Adicionar novamente as cartas removidas ao jogo
     for (var card in cardSprites) {
       if (!children.contains(card)) {
         add(card);
@@ -571,7 +543,6 @@ class CardGame extends FlameGame with TapDetector {
     playerLifeLost = 0;
     computerLifeLost = 0;
 
-    // Atualiza o status do jogo
     updateStatus("Jogo reiniciado. Toque em uma carta para começar.");
   }
 }
