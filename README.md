@@ -19,6 +19,10 @@ Este é um jogo de cartas desenvolvido com Flutter e Flame Engine, onde o jogado
 
 ## 🖼️ Screenshots e Video
 
+
+https://github.com/user-attachments/assets/4a226c2c-3355-4a9b-bab3-20e96b453549
+
+
 <table>
   <tr>
     <td><img alt="Menu" src=".github/menu.png" width="100%"></td>
