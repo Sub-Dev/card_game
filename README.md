@@ -1,6 +1,12 @@
+<p align="center">
+  <img alt="Game" title="Card Game" src=".github/logo.png" width="400px" />
+</p>
+<p align="center">
+  <img alt="Interface da aplicação" src=".github/menu.png" width="100%">
+</p>
 # 🃏 Card Game - Flutter & Flame
 
-Este é um jogo de cartas desenvolvido com Flutter e Flame Engine, onde o jogador e o computador se enfrentam utilizando cartas com diferentes valores de ataque, defesa e vida. O jogo inclui animações, efeitos sonoros e uma mecânica de combate simples.Foi desenvolvido com o intuito de aprender mais sobre a Flame Engine e o Flutter.
+Este é um jogo de cartas desenvolvido com Flutter e Flame Engine, onde o jogador e o computador se enfrentam utilizando cartas com diferentes valores de ataque, defesa e vida. O jogo inclui animações, efeitos sonoros e uma mecânica de combate simples.Foi desenvolvido com o intuito de aprender mais sobre a Flame Engine e o Flutter sendo um projeto bem simples.
 
 ## 🚀 Funcionalidades
 
@@ -43,6 +49,11 @@ Para rodar o projeto, você precisará de:
 3. Instale as dependências:
    ```bash
    flutter pub get
+   ```
+4. Executar na web
+
+   ```bash
+   flutter run -d chrome
    ```
 
 ## 🎮 Como jogar
